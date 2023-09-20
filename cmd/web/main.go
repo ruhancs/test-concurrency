@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/gob"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,8 @@ import (
 )
 
 var webPort = "8000"
+
+//password admin = verysecret
 
 func main() {
 	db := initDB()
@@ -110,6 +113,7 @@ func openDB(dsn string) (*sql.DB,error) {
 }
 
 func initSession() *scs.SessionManager {
+	gob.Register(data.User{})//para armazer na usuario na sessao
 	session := scs.New()
 	//informacoes da sessao sao armazenada no redis
 	session.Store = redisstore.New(initRedis())
@@ -128,7 +132,6 @@ func initRedis() *redis.Pool {
 			return redis.Dial("tcp", os.Getenv("REDIS"))
 		},
 	}
-
 	return redisPool
 }
 
