@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"test-concurrency/data"
 	"time"
 
 	"github.com/alexedwards/scs/redisstore"
@@ -39,6 +40,7 @@ func main() {
 		Wait: &wg,
 		Infolog: infoLog,
 		ErrorLog: errorLog,
+		Models: data.New(db),
 	}
 
 	//vericar o sinal de shutdown(terminar ou parar aplicacao)
