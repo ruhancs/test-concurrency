@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/alexedwards/scs/redisstore"
@@ -38,6 +40,9 @@ func main() {
 		Infolog: infoLog,
 		ErrorLog: errorLog,
 	}
+
+	//vericar o sinal de shutdown(terminar ou parar aplicacao)
+	go app.ListenForShutdown()
 
 	app.serve()
 }
@@ -123,4 +128,25 @@ func initRedis() *redis.Pool {
 	}
 
 	return redisPool
+}
+
+//shutdown para terminar as tarefas antes da aplicacao ser derrubada
+func (app *Config) ListenForShutdown() {
+	quit := make(chan os.Signal,1)
+	//qnd tiver sinal de parar o app ou sinal de terminar o app envia noticacao para o canal
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	//blockeia ate ter o sinal de para ou terminar o app
+	<-quit
+	app.shutdown()//limpa as tarefas
+	os.Exit(0)
+}
+
+func (app *Config) shutdown() {
+	//limpa todas tarefas
+	app.Infolog.Println("would run cleanup tasks...")
+
+	//bloqueia o termino ate o wg(WaitGroup) estar vazio
+	app.Wait.Wait()
+
+	app.Infolog.Println("closing channels and shutting down application...")
 }
