@@ -46,6 +46,11 @@ func main() {
 		Models: data.New(db),
 	}
 
+	//setup do email
+	app.Mailer = app.creteMail()
+	//iniciar a escuta dos canais de email
+	go app.listenForMail()
+
 	//vericar o sinal de shutdown(terminar ou parar aplicacao)
 	go app.ListenForShutdown()
 
@@ -150,8 +155,36 @@ func (app *Config) shutdown() {
 	//limpa todas tarefas
 	app.Infolog.Println("would run cleanup tasks...")
 
-	//bloqueia o termino ate o wg(WaitGroup) estar vazio
+	//bloqueia o termino ate o wg(WaitGroup) estar vazio, ate enviar todos emails
 	app.Wait.Wait()
 
+	//indica que o envio de emails chegou ao fim
+	app.Mailer.DoneChan <- true
+
 	app.Infolog.Println("closing channels and shutting down application...")
+	close(app.Mailer.MailerChan)
+	close(app.Mailer.ErrorChan)
+	close(app.Mailer.DoneChan)
+}
+
+func (app *Config) creteMail() Mail{
+	errChan := make(chan error)
+	mailerChan := make(chan Message, 100)//buffer channel envia ate 100 msg simutaneas
+	doneChan := make(chan bool)
+
+	m := Mail{
+		Domain: "localhost",
+		Host: "localhost",
+		Port: 1025,
+		Encryption: "none",
+		FromAddress: "info@mycompany.com",
+		FromName: "test",
+		Wait: app.Wait, //VERIFICAR
+		ErrorChan: errChan,
+		MailerChan: mailerChan,
+		DoneChan : doneChan,
+	}
+
+
+	return m
 }
