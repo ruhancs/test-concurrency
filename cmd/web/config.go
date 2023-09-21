@@ -16,5 +16,7 @@ type Config struct {
 	ErrorLog *log.Logger
 	Wait *sync.WaitGroup
 	Models data.Models
-	Mailer Mail 
+	Mailer Mail
+	ErrorChan chan error
+	ErrorChanDone chan bool 
 }

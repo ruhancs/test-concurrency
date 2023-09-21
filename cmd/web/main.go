@@ -44,6 +44,8 @@ func main() {
 		Infolog: infoLog,
 		ErrorLog: errorLog,
 		Models: data.New(db),
+		ErrorChan: make(chan error),
+		ErrorChanDone: make(chan bool),
 	}
 
 	//setup do email
@@ -54,7 +56,21 @@ func main() {
 	//vericar o sinal de shutdown(terminar ou parar aplicacao)
 	go app.ListenForShutdown()
 
+	//verificar erros nos canais em background de envio de email de invoice
+	go app.listenForError()
+
 	app.serve()
+}
+
+func(app *Config) listenForError() {
+	for {
+		select {
+		case err := <- app.ErrorChan:
+			app.ErrorLog.Println(err)
+		case <- app.ErrorChanDone:
+			return
+		}
+	}
 }
 
 func(app *Config) serve() {
@@ -160,11 +176,14 @@ func (app *Config) shutdown() {
 
 	//indica que o envio de emails chegou ao fim
 	app.Mailer.DoneChan <- true
+	app.ErrorChanDone <- true
 
 	app.Infolog.Println("closing channels and shutting down application...")
 	close(app.Mailer.MailerChan)
 	close(app.Mailer.ErrorChan)
 	close(app.Mailer.DoneChan)
+	close(app.ErrorChan)
+	close(app.ErrorChanDone)
 }
 
 func (app *Config) creteMail() Mail{
